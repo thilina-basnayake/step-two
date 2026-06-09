@@ -1,0 +1,11 @@
+@StepTwo.ExampleWebApi_HostAddress = http://localhost:5106
+
+GET {{StepTwo.ExampleWebApi_HostAddress}}/openapi/v1.json
+Accept: application/json
+
+###
+
+GET {{StepTwo.ExampleWebApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
