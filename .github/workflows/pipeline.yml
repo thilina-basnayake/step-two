@@ -1,0 +1,103 @@
+on:
+  push:
+    branches:
+    - main
+name: GitHub Pipeline
+jobs:
+  ghjob_deploy_dev:
+    runs-on: ubuntu-latest
+    name: Deploy - Development
+    needs:
+    - ghjob_build_and_test
+    environment: Development
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: webapi-drop
+      id: gh_d_1_down
+      name: Download Build Artifact
+      continue-on-error: false
+    - run: |
+        echo "Verifying artifact for Development..."
+        ls -la ./webapi-drop
+        find ./webapi-drop -iname "*.dll" | grep -q . && echo "Artifact verified" || (echo "Artifact verification failed" && exit 1)
+      shell: sh
+      id: gh_d_2
+      name: Verify Artifact
+      continue-on-error: false
+  ghjob_deploy_staging:
+    runs-on: ubuntu-latest
+    name: Deploy - Staging
+    needs:
+    - ghjob_build_and_test
+    - ghjob-deploy-dev
+    environment: Staging
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: webapi-drop
+      id: gh_d_1_down
+      name: Download Build Artifact
+      continue-on-error: false
+    - run: |
+        echo "Verifying artifact for Development..."
+        ls -la ./webapi-drop
+        find ./webapi-drop -iname "*.dll" | grep -q . && echo "Artifact verified" || (echo "Artifact verification failed" && exit 1)
+      shell: sh
+      id: gh_d_2
+      name: Verify Artifact
+      continue-on-error: false
+  ghjob_build_and_test:
+    runs-on: ubuntu-latest
+    name: Build, Test and Publish Artifacts
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        path: ''
+        clean: False
+        fetch-depth: ''
+        filter: ''
+        fetch-tags: False
+        lfs: False
+        persist-credentials: false
+        submodules: ''
+      id: gh_bat_1_checkout
+      name: Checkout
+      continue-on-error: false
+    - uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+      id: gh_bat_2_setup_dotnet
+      name: Use .NET SDK
+      continue-on-error: false
+    - run: |
+        dotnet restore ./api
+      shell: sh
+      id: gh_bat_3_restore
+      name: Restore Dependencies
+      continue-on-error: false
+    - run: |
+        dotnet build ./api --configuration Release --no-restore
+      shell: sh
+      id: gh_bat_4_build
+      name: Build
+      continue-on-error: false
+    - run: |
+        dotnet test ./api --configuration Release --no-build
+      shell: sh
+      id: gh_bat_5_run_tests
+      name: Run Tests
+      continue-on-error: false
+    - run: |
+        dotnet publish ./api --configuration Release --no-build --output ${{ github.workspace }}/staging
+      shell: sh
+      id: gh_bat_6_publish
+      name: Publish Outputs
+      continue-on-error: false
+    - uses: actions/upload-artifact@v4
+      with:
+        name: webapi-drop
+        path: ${{ github.workspace }}/staging
+      id: gh_bat_7_pub_artifact
+      name: Publish Artifact
+      continue-on-error: false
